@@ -112,7 +112,7 @@ def main():
                 {'Análise': analysis}, 
                 {'Previsão': predictions}
             ]
-            logging.info('Gerando PDF do relatório...')
+            logging.info('Gerando relatório...')
             pdf_file = report_pdf.generate_report_pdf(section_list)
 
             msg = f'Relatório gerado: {pdf_file}'
