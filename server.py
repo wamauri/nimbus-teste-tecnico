@@ -9,7 +9,7 @@ from rich import print as banner
 logging.basicConfig(
     filename='server.log', 
     filemode='a', 
-    format='%(asctime)s - %(levelname)s - %(message)s', 
+    format='%(asctime)s - %(levelname)s - SERVER %(message)s', 
     level=logging.INFO
 )
 
