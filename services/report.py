@@ -98,10 +98,9 @@ class ReportHeader(Report):
             x_margin_box=x_margin_box + 5, 
             client_section_y=client_section_y
         )
-        
-        date_section_y = client_section_y + self.CELL_HEIGHT + 5
+
         pdf = ReportDate(pdf=self.pdf)
-        pdf = pdf.add_date(x=x_margin_box, y=date_section_y)
+        pdf = pdf.add_date()
         
         self.pdf.set_xy(x_margin_box + 5, client_section_y + 9)
         self.pdf.set_font('Arial', 'B', self.HEADER_FONT_SIZE)
@@ -141,17 +140,75 @@ class ReportPDF(Report):
             self.HEIGHT_BOX
         )
 
+    def message_height(self, msg, box_width):
+        """
+        Method for calculating the required height for a message, 
+        without actually printing it to the PDF.
+        """
+        return self.pdf.get_string_width(msg) / box_width * self.CELL_HEIGHT
+
+    def can_fit_message(self, msg, current_y_position, box_start_y, box_height, box_width):
+        """
+        Checks whether the message fits in the 
+        available space on the board.
+        """
+        message_height = self.message_height(msg, box_width)
+        available_space = box_start_y + box_height - current_y_position
+
+        return message_height <= available_space
+
+    def add_content_to_pdf(self, item):
+        self.pdf.set_text_color(*self.WHITE)
+
+        if 'mensagem' in item:
+            if 'forte' in item['mensagem'].lower():
+                self.pdf.set_fill_color(*self.RED)
+            else:
+                self.pdf.set_fill_color(*self.GRAY)
+
+        self.pdf.set_font('Arial', 'B', 9)
+
+        if 'fenomeno' in item:
+            self.pdf.cell(
+                w=37, 
+                h=5, 
+                txt=f"{item['fenomeno'].capitalize()}", 
+                border=0, 
+                ln=True, 
+                fill=True
+            )
+
+        self.pdf.set_text_color(*self.BLACK)
+        date, hour = self._get_date_hour(item)
+
+        if 'data' in item:
+            self.pdf.cell(10, 1, ln=True)
+            self.pdf.cell(41, 4, f"{'/'.join(date)} às {hour}")
+            self.pdf.set_font('Arial', '', 9)
+            self.pdf.set_x(self.X_MARGIN_BOX)
+
+        if 'mensagem' in item:
+            self.pdf.set_left_margin(self.X_MARGIN_BOX + 5)
+            self.pdf.multi_cell(
+                w=self.WIDTH_BOX - self.X_MARGIN_BOX / 2, 
+                h=4, 
+                txt=f"{self.INDENT_MESSAGE}{item['mensagem'].strip()}", 
+                align='J'
+            )
+            self.pdf.set_text_color(*self.BLACK)
+            self.pdf.cell(self.WIDTH_BOX - self.X_MARGIN_BOX / 2, 4, ln=True)
+
+            return  self.pdf.get_y()
+
     def generate_report_pdf(self, section_list):
 
-        for section_dict in section_list:            
-            self.pdf.add_page()
-            self.draw_box(self.Y_MARGIN_TOP_BOX)
-            self.draw_box(self.Y_MARGIN_BOTTOM_BOX)
+        for section_dict in section_list:
 
-            for idx, (section_name, sections) in enumerate(section_dict.items()):
-
-                if idx % 2 == 0 and idx > 0:
-                    self.pdf.add_page()
+            for section_name, section_items in section_dict.items():
+                current_y_position = self.Y_MARGIN_TOP_BOX + 30
+                self.pdf.add_page()
+                self.draw_box(self.Y_MARGIN_TOP_BOX)
+                self.draw_box(self.Y_MARGIN_BOTTOM_BOX)
                 
                 self.pdf = self.report_header.add_header(
                     x_margin_box=self.X_MARGIN_BOX, 
@@ -168,46 +225,56 @@ class ReportPDF(Report):
                     section=section_name
                 )
 
-                for section in sections:
-                    date, hour = self._get_date_hour(section)
+                y_margin_box = self.Y_MARGIN_TOP_BOX
+                items_quantity = len(section_items)
+                loop = 1
 
-                    self.pdf.set_text_color(*self.WHITE)
+                for item in section_items:
+                    message = item.get('mensagem', '')
+                    message_fit = self.can_fit_message(
+                        message, 
+                        current_y_position, 
+                        y_margin_box + 20, 
+                        self.HEIGHT_BOX, 
+                        self.WIDTH_BOX
+                    )
 
-                    if 'mensagem' in section:
-                        if 'forte' in section['mensagem'].lower():
-                            self.pdf.set_fill_color(*self.RED)
+                    if not message_fit:
+                        if not message_fit and current_y_position == 256:
+                            self.pdf.add_page()
+                            self.draw_box(self.Y_MARGIN_TOP_BOX)
+                            self.pdf = self.report_header.add_header(
+                                x_margin_box=self.X_MARGIN_BOX, 
+                                y_margin_box=self.Y_MARGIN_TOP_BOX, 
+                                width_box=self.WIDTH_BOX, 
+                                client_data=self.client_data, 
+                                section=section_name
+                            )
+
+                            if not loop == items_quantity:
+                                self.draw_box(self.Y_MARGIN_BOTTOM_BOX)
+                                self.pdf = self.report_header.add_header(
+                                    x_margin_box=self.X_MARGIN_BOX, 
+                                    y_margin_box=self.Y_MARGIN_BOTTOM_BOX, 
+                                    width_box=self.WIDTH_BOX, 
+                                    client_data=self.client_data, 
+                                    section=section_name
+                                )
+                            y_margin_box = self.Y_MARGIN_TOP_BOX
+                            current_y_position = self.Y_MARGIN_TOP_BOX + 30
+                            self.pdf.set_xy(self.X_MARGIN_BOX + 5, current_y_position)
+                            current_y_position = self.add_content_to_pdf(item)
                         else:
-                            self.pdf.set_fill_color(*self.GRAY)
+                            y_margin_box = self.Y_MARGIN_BOTTOM_BOX
+                            current_y_position = self.Y_MARGIN_BOTTOM_BOX + 30
+                            self.pdf.set_xy(self.X_MARGIN_BOX + 5, current_y_position)
+                            current_y_position = self.add_content_to_pdf(item)
 
-                    self.pdf.set_font('Arial', 'B', 9)
+                    else:
+                        self.pdf.set_xy(self.X_MARGIN_BOX + 5, current_y_position)
+                        current_y_position = self.add_content_to_pdf(item)
 
-                    if 'fenomeno' in section:
-                        self.pdf.cell(
-                            w=37, 
-                            h=5, 
-                            txt=f"{section['fenomeno'].capitalize()}", 
-                            border=0, 
-                            ln=True, 
-                            fill=True
-                        )
-
-                    self.pdf.set_text_color(*self.BLACK)
-
-                    if 'data' in section:
-                        self.pdf.cell(10, 1, ln=True)
-                        self.pdf.cell(41, 4, f"{'/'.join(date)} às {hour}")
-                        self.pdf.set_font('Arial', '', 9)
-                        self.pdf.set_x(self.X_MARGIN_BOX)
-
-                    if 'mensagem' in section:
-                        self.pdf.set_left_margin(self.X_MARGIN_BOX + 5)
-                        self.pdf.multi_cell(
-                            w=self.WIDTH_BOX - self.X_MARGIN_BOX / 2, 
-                            h=4, 
-                            txt=f"{self.INDENT_MESSAGE}{section['mensagem'].strip()}", 
-                            align='J')
-                        self.pdf.set_text_color(*self.BLACK)
-                        self.pdf.cell(self.WIDTH_BOX - self.X_MARGIN_BOX / 2, 4, ln=True)
+                    loop += 1
 
         pdf_file = self._get_pdf_file_path()
         self.pdf.output(pdf_file)
