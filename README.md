@@ -48,7 +48,7 @@ $ git clone https://github.com/wamauri/nimbus-teste-tecnico.git
 $ cd nimbus-teste-tecnico
 ```
 
-### Instalação de  Dependencias
+### Instalação de  Dependências
 
 ```
 $ python3.10 -m pip install -r requirements.txt
