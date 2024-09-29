@@ -26,7 +26,7 @@ def validate_data(data):
 
     name, email, phone_number, age = data_list
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    phone_number_regex = r'^[0-9]{12}$'
+    phone_number_regex = r'^(\d{11}|\d{12})$'
 
     if not re.match(email_regex, email) or not re.match(phone_number_regex, phone_number):
         return False
