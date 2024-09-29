@@ -102,11 +102,12 @@ $ python3.10 -m pip install -r requirements.txt
    **Configurando o email**:
 
    As constantes para a configuração de autenticação para o envio de email está no arquivo: `services/email.py`
+   >Se usar email que utiliza autenticação de dois fatores, será necessário outro tipo de senha fornecida pelo seu servidor de email
    ```
    SMTP_SERVER = 'smtp.gmail.com'
    SMTP_PORT = 587
-   USERNAME = 'wamauri10@gmail.com'
-   PASSWORD = 'ajtv bwaz yqhg wmyi'
+   USERNAME = 'seuemail@mail.com'
+   PASSWORD = 'suasenha'
    ```
    As constantes para a configuração do assunto e do corpo do email está no arquivo: `generate_report.py`
    ```
